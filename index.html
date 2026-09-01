@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRS1</title>
+    <!-- Icône SVG intégrée -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23131314%22/><path d=%22M50 20L20 50l30 30 30-30z%22 fill=%22url(%23grad)%22/><defs><linearGradient id=%22grad%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%233b82f6%22/><stop offset=%22100%25%22 stop-color=%22%239333ea%22/></linearGradient></defs></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#131314] text-gray-100 h-screen flex flex-col font-sans overflow-hidden" x-data="aiApp()" x-init="initAI()">
+
+    <!-- Header -->
+    <header class="p-4 flex justify-between items-center bg-[#131314] border-b border-gray-800/50 z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h1 class="font-medium text-lg tracking-wide flex items-center gap-2">
+                MRS1
+                <span class="text-[10px] px-2 py-0.5 rounded border flex items-center gap-1 transition-colors" :class="isReady ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10'">
+                    <span class="w-1.5 h-1.5 rounded-full animate-pulse" :class="isReady ? 'bg-green-400' : 'bg-yellow-400'"></span>
+                    <span x-text="statusText"></span>
+                </span>
+            </h1>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @click="clearChat()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="Nouveau chat">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+            <button @click="showSettings = true" class="p-2 text-gray-400 hover:text-white rounded-lg" title="Paramètres">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Zone de Chat / Écran de Téléchargement -->
+    <div class="flex-1 overflow-y-auto w-full max-w-4xl mx-auto p-4 pb-32 flex flex-col gap-6" id="chat-container">
+        
+        <!-- Écran de téléchargement automatique initial -->
+        <template x-if="!isReady">
+            <div class="flex flex-col items-center justify-center p-6 mt-12 bg-[#1e1f20] rounded-2xl border border-gray-800 shadow-xl max-w-sm mx-auto w-full text-center">
+                <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 text-blue-400">
+                    <svg class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </div>
+                <h2 class="text-base font-bold text-white mb-1">Premier lancement</h2>
+                <p class="text-xs text-gray-400 mb-4">Téléchargement unique du cerveau de l'IA (~250 Mo). Ensuite, l'app fonctionnera totalement hors-ligne.</p>
+                <p class="text-xs text-blue-400 font-mono mb-2" x-text="loadingMessage"></p>
+                <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-blue-500 h-full transition-all duration-300" :style="`width: ${progress}%`"></div>
+                </div>
+                <span class="text-[10px] text-gray-500 mt-2" x-text="progress + '%'"></span>
+            </div>
+        </template>
+
+        <!-- Messages de discussion -->
+        <template x-for="message in messages">
+            <div class="flex w-full" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
+                <div class="flex gap-3 max-w-[85%]">
+                    <div :class="message.role === 'user' ? 'bg-[#2a2b2e] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow' : 'text-gray-200 px-1 py-1 leading-relaxed text-sm'">
+                        <p class="whitespace-pre-wrap" x-text="message.content"></p>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Input Bas de page -->
+    <div class="fixed bottom-0 w-full bg-[#131314] pb-4 pt-2 border-t border-gray-800/40">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="relative flex items-end bg-[#1e1f20] rounded-2xl border border-gray-700/50 p-2">
+                <textarea x-model="userInput" @keydown.enter.prevent="if(!isGenerating && isReady) sendMessage()" :disabled="!isReady || isGenerating" placeholder="Message..." class="flex-1 bg-transparent border-none rounded-xl px-3 py-2 min-h-[40px] max-h-[120px] resize-none text-sm text-gray-100 focus:outline-none disabled:opacity-50" rows="1"></textarea>
+                <button @click="sendMessage()" :disabled="!isReady || isGenerating || userInput.trim() === ''" class="mb-0.5 mr-0.5 p-2 rounded-xl transition-all disabled:opacity-30" :class="userInput.trim() !== '' ? 'bg-white text-black' : 'bg-gray-800 text-gray-400'">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Paramètres -->
+    <div x-show="showSettings" style="display: none;" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div @click.away="showSettings = false" class="bg-[#1e1f20] border border-gray-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-white">Paramètres</h2>
+                <button @click="showSettings = false" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-gray-300 mb-1">Rôle de l'IA (System Prompt)</label>
+                <textarea x-model="systemPrompt" class="w-full bg-[#131314] border border-gray-700 rounded-lg p-2.5 text-xs text-gray-200 focus:outline-none" rows="2"></textarea>
+            </div>
+            <button @click="showSettings = false" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl text-sm">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        function aiApp() {
+            return {
+                engine: null,
+                isReady: false,
+                isGenerating: false,
+                statusText: 'Téléchargement...',
+                loadingMessage: 'Connexion au dépôt du modèle...',
+                progress: 0,
+                userInput: '',
+                showSettings: false,
+                systemPrompt: 'Tu es un assistant utile, direct et concis. Tu réponds en français.',
+                messages: [],
+
+                async initAI() {
+                    try {
+                        const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+                        const selectedModel = "SmolLM2-360M-Instruct-q4f16_1-MLC";
+                        
+                        const initProgressCallback = (report) => {
+                            this.loadingMessage = report.text;
+                            if (report.progress) {
+                                this.progress = Math.round(report.progress * 100);
+                            }
+                        };
+
+                        this.engine = await webllm.CreateMLCEngine(
+                            selectedModel, 
+                            { initProgressCallback: initProgressCallback }
+                        );
+                        
+                        this.isReady = true;
+                        this.statusText = 'Prêt (Hors-ligne)';
+                        this.messages.push({ role: 'assistant', content: 'Modèle téléchargé et chargé en local ! Comment puis-je t\'aider ?' });
+                    } catch (error) {
+                        console.error("Erreur d'initialisation :", error);
+                        this.statusText = 'Erreur';
+                        this.loadingMessage = 'Échec du téléchargement. Vérifie ta connexion internet.';
+                    }
+                },
+
+                clearChat() {
+                    if (confirm("Effacer la conversation ?")) this.messages = [];
+                },
+
+                autoScroll() {
+                    setTimeout(() => {
+                        const chat = document.getElementById('chat-container');
+                        chat.scrollTop = chat.scrollHeight;
+                    }, 50);
+                },
+
+                async sendMessage() {
+                    if (!this.userInput.trim() || this.isGenerating) return;
+
+                    const textToSend = this.userInput;
+                    this.userInput = '';
+                    this.messages.push({ role: 'user', content: textToSend });
+                    this.isGenerating = true;
+                    this.autoScroll();
+
+                    let assistantIdx = this.messages.push({ role: 'assistant', content: '...' }) - 1;
+
+                    try {
+                        const apiMessages = [
+                            { role: 'system', content: this.systemPrompt },
+                            ...this.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+                        ];
+
+                        const reply = await this.engine.chat.completions.create({
+                            messages: apiMessages,
+                            temperature: 0.7,
+                            max_tokens: 512
+                        });
+
+                        this.messages[assistantIdx].content = reply.choices[0].message.content;
+                    } catch (error) {
+                        this.messages[assistantIdx].content = "Erreur lors de la génération de la réponse.";
+                        console.error(error);
+                    } finally {
+                        this.isGenerating = false;
+                        this.autoScroll();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
